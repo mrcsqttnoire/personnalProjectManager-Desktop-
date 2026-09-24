@@ -1,0 +1,10 @@
+INSTALLATION RAPIDE
+===================
+
+1. Installer les polices (dossier Font/)
+2. Créer la base "ppm" dans phpMyAdmin
+3. Importer ppm.sql
+4. Configurer ODBC 32 bits avec le nom "PPM"
+5. Lancer Personal_Project_Manager.exe dans le dossier "build/"
+
+Compte test : alyratojo@gmail.com / mic

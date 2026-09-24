@@ -1,0 +1,76 @@
+Personnal Project Manager est une application de géstion des projets personnel.
+
+Pour bien voir l'application et sa beauté je vous invite à suivres les étapes ci-dessous:
+
+## Installation et configuration
+
+### Étape 1 : Installation des polices
+
+1. Accédez au dossier `Font/`
+2. Installez les deux polices :
+   - **Montserrat** (police principale)
+   - **Jaapokki** (police pour les titres)
+3. Double-cliquez sur chaque fichier `.ttf` ou `.otf` et cliquez sur "Installer"
+
+### Étape 2 : Configuration de la base de données
+
+1. **Démarrer XAMPP/WAMP** :
+   - Lancez les services Apache et MySQL
+
+2. **Créer la base de données** :
+   - Ouvrez phpMyAdmin (http://localhost/phpmyadmin)
+   - Cliquez sur "Nouvelle base de données"
+   - Nom : `ppm`
+   - Interclassement : `utf8mb4_general_ci`
+   - Cliquez sur "Créer"
+
+3. **Importer les données** :
+   - Sélectionnez la base de données `ppm`
+   - Onglet "Importer"
+   - Choisissez le fichier `ppm.sql` fourni
+   - Cliquez sur "Exécuter"
+
+### Étape 3 : Configuration ODBC
+
+1. **Ouvrir l'Administrateur de sources de données ODBC** :
+   - Recherchez "ODBC" dans Windows
+   - Lancez **"Administrateur de sources de données ODBC (32 bits)"**
+   
+   **Important** : Utilisez bien la version **32 bits**.
+
+2. **Ajouter une nouvelle source de données** :
+   - Onglet "DSN Système" ou "DSN Utilisateur"
+   - Cliquez sur "Ajouter..."
+   - Sélectionnez le pilote : **MySQL ODBC 5.2w Driver**
+   - Cliquez sur "Terminer"
+
+3. **Configuration de la connexion** :
+Data Source Name : PPM
+Description      : Personal Project Manager Database
+TCP/IP Server    : localhost
+Port             : 3306
+User             : root
+Password         : (laissez vide par défaut)
+Database         : ppm
+
+### Étape 4 : Lancement de l'application
+
+#### Option A : Utiliser l'exécutable (Recommandé)
+1. Naviguez vers le dossier `Build/`
+2. Double-cliquez sur `Personal_Project_Manager.exe`
+3. L'application se lance !
+
+#### Option B : Compiler depuis les sources
+1. Ouvrez Borland C++ Builder 6 . Et naviguez vers le dossier `source/`
+2. Ouvrez le fichier `personal_project_manager.bpr`
+3. Appuyez sur F9 pour compiler et exécuter
+
+
+##  Comptes de test
+
+L'application est fournie avec trois comptes de démonstration :
+
+| alyratojo@gmail.com | mdp :  `mic` | ** Recommandé** - Contient de nombreux projets pour tester toutes les fonctionnalités 
+| marie@gmail.com | mdp : `marie` | Compte avec quelques projets 
+| rakoto@gmail.com |mdp : `koto` | Compte basique 
+

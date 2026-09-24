@@ -1,0 +1,600 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+#include "Unit2.h"
+#include "Unit3.h"
+#include "Unit5.h"
+#include "Unit6.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TRecherche *Recherche;
+//---------------------------------------------------------------------------
+__fastcall TRecherche::TRecherche(TComponent* Owner)
+        : TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::FormClose(TObject *Sender,
+      TCloseAction &Action)
+{
+        Application->Terminate();        
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::FormCreate(TObject *Sender)
+{
+        Application->HintHidePause = 5000;
+
+        login->RendreTransparent(dashboard);
+        login->RendreTransparent(projet);
+        login->RendreTransparent(logout);
+        login->RendreTransparent(recherche);
+        login->RendreTransparent(user);
+        login->RendreTransparent(logo);
+        login->RendreTransparent(Search_date); 
+        login->RendreTransparent(Refresh);
+        logoutPosition = logout->Top;
+        btnPosition = Search_date->Top;
+        
+    sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(login->IdUser) + " " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 WHEN statut_p = 'termine' THEN 2 END, Id_p DESC";
+    ChargerProjets(sqlSearch);
+    AfficherTousProjets(3);
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::FormDestroy(TObject *Sender)
+{
+    ViderAffichage();
+}
+
+void __fastcall TRecherche::ChargerProjets(String sql)
+{
+    projetsRecherche.clear();
+
+    //ShowMessage("1. Début ChargerProjets");
+
+    try {
+        Database->Query->Close();
+        Database->Query->SQL->Clear();
+        Database->Query->SQL->Add(sql); 
+
+        //ShowMessage("2. SQL préparé");
+
+        Database->Query->Open();
+
+        //ShowMessage("2. SQL ouvert");
+        //int compteur = 0;
+        Database->Query->First();
+        while(!Database->Query->Eof)
+        {
+            ProjetRecherche p;
+            p.id = Database->Query->FieldByName("Id_p")->AsInteger;
+            p.titre = Database->Query->FieldByName("titre_p")->AsString;
+            p.categorie = Database->Query->FieldByName("categori_p")->AsString;
+            p.description = Database->Query->FieldByName("description_p")->AsString;
+            p.priorite = Database->Query->FieldByName("Type_p")->AsString;
+            p.statut = Database->Query->FieldByName("statut_p")->AsString;
+            p.dateDebut = Database->Query->FieldByName("date_debut")->AsDateTime;
+            p.note = Database->Query->FieldByName("note_p")->AsString;
+            
+            //if(!Database->Query->FieldByName("date_fin")->IsNull)
+                p.dateFin = Database->Query->FieldByName("date_fin")->AsDateTime;
+            //else
+                //p.dateFin = 0;
+            
+            projetsRecherche.push_back(p);
+            //compteur++;
+            Database->Query->Next();
+
+            //ShowMessage("4. " + IntToStr(compteur) + " projet(s) chargé(s) dans le vecteur");
+        }
+    }
+    catch(Exception &e) {
+        ShowMessage("Erreur de chargement: " + e.Message);
+    }
+}
+
+void __fastcall TRecherche::CreerCarteProjet(ProjetRecherche projet, int index, int Row)
+{
+        //ShowMessage("8. Début CreerCarteProjet pour: " + projet.titre);
+        
+    int cardsPerRow = Row;
+    int cardWidth = 300;
+    int cardHeight = 292;
+    int marginX = 50;
+    int marginY = 40;
+    
+    int col = index % cardsPerRow;
+    int row = index / cardsPerRow;
+    
+    int left = marginX + (col * (cardWidth + marginX));
+    int top = marginY + (row * (cardHeight + marginY));
+
+    TPanel *card = new TPanel(ScrollBoxProjets);
+    card->Parent = ScrollBoxProjets;
+    card->Left = left;
+    card->Top = top;
+    card->Width = cardWidth;
+    card->Height = cardHeight;
+    card->Color = (TColor)0x00F0E8E2;
+    card->BevelOuter = bvNone;
+    card->Tag = projet.id;
+
+    TLabel *lblTitre = new TLabel(card);
+    lblTitre->Parent = card;
+    lblTitre->Caption = projet.titre;
+    lblTitre->Left = 25;
+    lblTitre->Top = 25;
+    lblTitre->Font->Size = 12;
+    lblTitre->Font->Name = "Montserrat";
+    lblTitre->Font->Style = TFontStyles() << fsBold;
+    lblTitre->Font->Color = (TColor)0x2a170f;
+    lblTitre->Transparent = true;
+
+    TLabel *lblCategorie = new TLabel(card);
+    lblCategorie->Parent = card;
+    lblCategorie->Caption = projet.categorie;
+    lblCategorie->Left = 25;
+    lblCategorie->Top = 48;
+    lblCategorie->Font->Name = "Montserrat";
+    lblCategorie->Font->Size = 8;
+    lblCategorie->Font->Color = clGray;
+    lblCategorie->Transparent = true;
+
+    TPanel *badgePriorite = new TPanel(card);
+    badgePriorite->Parent = card;
+    badgePriorite->Left = 180;
+    badgePriorite->Top = 20;
+    badgePriorite->Width = 95;
+    badgePriorite->Height = 28;
+    badgePriorite->Caption = projet.priorite.UpperCase();
+    badgePriorite->Font->Name = "Montserrat";
+    badgePriorite->Font->Color = clWhite;
+    badgePriorite->Font->Style = TFontStyles() << fsBold;
+    badgePriorite->Font->Size = 8;
+    badgePriorite->BevelOuter = bvNone;
+
+    if(projet.priorite == "Urgent")
+        badgePriorite->Color = (TColor)0x3b4ce7; // Rouge
+    else if(projet.priorite == "Important")
+        badgePriorite->Color = (TColor)0x0b9ef5; // Orange
+    else
+        badgePriorite->Color = (TColor)0x71cc2e; // Vert
+
+    TMemo *memoDesc = new TMemo(card);
+    memoDesc->Parent = card;
+    memoDesc->Left = 25;
+    memoDesc->Top = 75;
+    memoDesc->Width = 250;
+    memoDesc->Height = 51;
+    memoDesc->Lines->Text = projet.description;
+    memoDesc->ReadOnly = true;
+    memoDesc->BorderStyle = bsNone;
+    memoDesc->Color = card->Color;
+    memoDesc->ScrollBars = ssNone;
+    memoDesc->WordWrap = true;
+    memoDesc->Font->Name = "Montserrat";
+
+    TLabel *lblDateDebut = new TLabel(card);
+    lblDateDebut->Parent = card;
+    lblDateDebut->Caption = "Début: " + DateToStr(projet.dateDebut);
+    lblDateDebut->Left = 25;
+    lblDateDebut->Top = 145;
+    lblDateDebut->Font->Size = 8;
+    lblDateDebut->Font->Color = clGray;
+    lblDateDebut->Font->Name = "Times New Roman";
+    lblDateDebut->Transparent = true;
+    
+    TLabel *lblDateFin = new TLabel(card);
+    lblDateFin->Parent = card;
+    String dateFin = DateToStr(projet.dateFin) ;
+    if(dateFin == "30/12/1899")
+        dateFin = "Non spécifiée";
+    else
+        dateFin = dateFin;
+    lblDateFin->Caption = "Fin: " + dateFin;
+    lblDateFin->Left = 25;
+    lblDateFin->Top = 160;
+    lblDateFin->Font->Size = 8;
+    lblDateFin->Font->Color = clGray;
+    lblDateFin->Font->Name = "Times New Romzn";
+    lblDateFin->Transparent = true;
+
+    TPanel *badgeStatut = new TPanel(card);
+    badgeStatut->Parent = card;
+    badgeStatut->Left = 180;
+    badgeStatut->Top = 145;
+    badgeStatut->Width = 95;
+    badgeStatut->Height = 24;
+    badgeStatut->Caption = projet.statut;
+    badgeStatut->Font->Name = "Montserrat";
+    badgeStatut->Font->Size = 8;
+    badgeStatut->Font->Style = TFontStyles() << fsBold;
+    badgeStatut->BevelOuter = bvNone;
+    
+    if(projet.statut == "en_cours") {
+        badgeStatut->Color = (TColor)0xfdf2e3;
+        badgeStatut->Font->Color = (TColor)0xd27619;
+    } else {
+        badgeStatut->Color = (TColor)0xe8f5e8;
+        badgeStatut->Font->Color = (TColor)0x327d2e;
+    }
+    
+    // Boutons d'action
+    int btnTop = 220;
+    int btnSize = 38  ;
+    bool termine = (projet.statut == "termine");
+    
+    // Bouton Supprimer
+    TImage *btnDelete = new TImage(card);
+    btnDelete->Parent = card;
+    btnDelete->Left = 25;
+    btnDelete->Top = btnTop;
+    btnDelete->Width = btnSize;
+    btnDelete->Height = btnSize;
+    btnDelete->Picture->LoadFromFile("icon\\trash.bmp");
+    login->RendreTransparent(btnDelete);
+    btnDelete->Tag = projet.id;
+    btnDelete->OnClick = BtnDeleteClick;
+    
+    // Bouton Voir
+    TImage *btnView = new TImage(card);
+    btnView->Parent = card;
+    btnView->Left = 75;
+    btnView->Top = btnTop;
+    btnView->Width = btnSize;
+    btnView->Height = btnSize;
+    btnView->Picture->LoadFromFile("icon\\eye.bmp");
+    login->RendreTransparent(btnView);
+    btnView->Tag = projet.id;
+    btnView->OnClick = BtnViewClick;
+    
+    // Bouton Modifier
+    TImage *btnEdit = new TImage(card);
+    btnEdit->Parent = card;
+    btnEdit->Left = 125;
+    btnEdit->Top = 219;
+    btnEdit->Width = btnSize;
+    btnEdit->Height = btnSize ;
+    btnEdit->Picture->LoadFromFile("icon\\edit.bmp");
+    btnEdit->Tag = projet.id;
+    btnEdit->OnClick = BtnEditClick;
+    btnEdit->Visible = !termine;
+    login->RendreTransparent(btnEdit);
+    
+    // Bouton Terminer
+    TImage *btnCheck = new TImage(card);
+    btnCheck->Parent = card;
+    btnCheck->Left = 175;
+    btnCheck->Top = btnTop;
+    btnCheck->Width = btnSize;
+    btnCheck->Height = btnSize;
+    btnCheck->Picture->LoadFromFile("icon\\check.bmp");
+    login->RendreTransparent(btnCheck);
+    btnCheck->Tag = projet.id;
+    btnCheck->OnClick = BtnCheckClick;
+    btnCheck->Visible = !termine;
+}
+void __fastcall TRecherche::AfficherTousProjets(int PerRow)
+{
+    ViderAffichage();
+    
+    for(size_t i = 0; i < projetsRecherche.size(); i++)
+    {
+        CreerCarteProjet(projetsRecherche[i], i, PerRow);
+    }
+}
+
+void __fastcall TRecherche::ViderAffichage()
+{
+    while(ScrollBoxProjets->ControlCount > 0)
+    {
+        delete ScrollBoxProjets->Controls[0];
+    }
+}
+
+void __fastcall TRecherche::BtnDeleteClick(TObject *Sender)
+{
+    TImage *btn = dynamic_cast<TImage*>(Sender);
+    if(!btn) return;
+
+    int projetId = btn->Tag;
+
+    String nomProjet = "";
+    for(size_t i = 0; i < projetsRecherche.size(); i++) {
+        if(projetsRecherche[i].id == projetId) {
+            nomProjet = projetsRecherche[i].titre;
+            break;
+        }
+    }
+
+    String message = "Voulez-vous vraiment supprimer ce projet :\n\n\"" + nomProjet + "\" ?";
+    if(MessageDlg(message, mtConfirmation, TMsgDlgButtons() << mbYes << mbNo, 0) == mrYes)
+    {
+        Database->QueryCUD->Close();
+        Database->QueryCUD->SQL->Clear();
+        String sqlDelete = "DELETE FROM projet WHERE Id_p = " + IntToStr(projetId);
+        Database->QueryCUD->SQL->Add(sqlDelete);
+        try {
+            Database->QueryCUD->ExecSQL();
+            //ShowMessage("Projet supprimé avec succès !");
+            //ChargerProjets();
+            //AfficherTousProjets();
+            sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(login->IdUser) + " " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 WHEN statut_p = 'termine' THEN 2 END, Id_p DESC";
+            TimerRefresh->Enabled = true;
+        }
+        catch(Exception &e) {
+            ShowMessage("Erreur lors de la suppression : " + e.Message);
+        }
+    }
+}
+
+void __fastcall TRecherche::BtnEditClick(TObject *Sender)
+{
+    TImage *btn = dynamic_cast<TImage*>(Sender);
+    if(!btn) return;
+
+    int projetId = btn->Tag;
+    for(size_t i = 0; i < projetsRecherche.size(); i++) {
+        if(projetsRecherche[i].id == projetId) {
+            editProjet.id = projetsRecherche[i].id;
+            editProjet.titre = projetsRecherche[i].titre;
+            editProjet.description = projetsRecherche[i].description;
+            editProjet.priorite = projetsRecherche[i].priorite;
+            editProjet.categorie = projetsRecherche[i].categorie;
+            editProjet.statut = projetsRecherche[i].statut;
+            editProjet.note = projetsRecherche[i].note;
+            editProjet.dateDebut = projetsRecherche[i].dateDebut;
+            editProjet.dateFin = projetsRecherche[i].dateFin;
+            break;
+        }
+    }
+    Mainform->Libelle->Caption = "Modification du projet";
+    if(!Mainform->Formulaire->Visible){
+        Mainform->Formulaire->Visible = true;
+        Mainform->DetailProjet->Visible = false;
+    }
+    Mainform->Reset->Visible = false;
+    Mainform->Ajouter->Visible = false;
+    Mainform->Valider->Visible = true;
+    Mainform->Annuler->Visible = true;
+
+    Mainform->titreProjet->Text = editProjet.titre;
+    Mainform->Description->Text = editProjet.description;
+    Mainform->Categorie->Text = editProjet.categorie;
+    Mainform->DateDebut->Date = editProjet.dateDebut;
+
+    if(DateToStr(editProjet.dateFin) == "30/12/1899"){
+        Mainform->DateFin->Date = Date();
+        Mainform->DateFin->Checked = false;
+    }else
+        Mainform->DateFin->Date = editProjet.dateFin;
+
+    Mainform->NoteAdditionnelle->Text = editProjet.note;
+
+    if(editProjet.priorite == "Normal"){
+        Mainform->RadioNormal->Checked = true;
+        Mainform->RadioNormal->Color = (TColor) 0x0081B910;
+        Mainform->RadioImportant->Color = (TColor) 0x00f0e8e2;
+        Mainform->RadioUrgent->Color =  (TColor) 0x00f0e8e2;
+
+    }else if(editProjet.priorite == "Important"){
+        Mainform->RadioImportant->Checked = true;
+        Mainform->RadioNormal->Color = (TColor) 0x00f0e8e2;
+        Mainform->RadioImportant->Color = (TColor) 0x000b9ef5;
+        Mainform->RadioUrgent->Color =  (TColor) 0x00f0e8e2;
+
+    }if(editProjet.priorite == "Urgent"){
+        Mainform->RadioUrgent->Checked = true;
+        Mainform->RadioNormal->Color = (TColor) 0x00f0e8e2;
+        Mainform->RadioImportant->Color = (TColor) 0x00f0e8e2;
+        Mainform->RadioUrgent->Color =  (TColor) 0x004444ef;
+    }
+    Mainform->Show();
+    this->Hide();
+    searchPage = true;
+}
+
+void __fastcall TRecherche::BtnViewClick(TObject *Sender)
+{
+    TImage *btn = dynamic_cast<TImage*>(Sender);
+    if(!btn) return;
+
+    ProjetRecherche viewProjet;
+    int projetId = btn->Tag;
+    for(size_t i = 0; i < projetsRecherche.size(); i++) {
+        if(projetsRecherche[i].id == projetId) {
+            viewProjet.id = projetsRecherche[i].id;
+            viewProjet.titre = projetsRecherche[i].titre;
+            viewProjet.description = projetsRecherche[i].description;
+            viewProjet.priorite = projetsRecherche[i].priorite;
+            viewProjet.categorie = projetsRecherche[i].categorie;
+            viewProjet.statut = projetsRecherche[i].statut;
+            viewProjet.note = projetsRecherche[i].note;
+            viewProjet.dateDebut = projetsRecherche[i].dateDebut;
+            viewProjet.dateFin = projetsRecherche[i].dateFin;
+            break;
+        }
+    }
+    Mainform->Libelle->Caption = "Détails du projet";
+    Mainform->DetailProjet->Left = 776;
+    Mainform->DetailProjet->Top = 88;
+    Mainform->Formulaire->Visible = false;
+    Mainform->DetailProjet->Visible = true;
+
+    Mainform->DetailTitre->Caption = viewProjet.titre;
+    Mainform->DetailDescription->Text = viewProjet.description;
+    Mainform->DetailCategorie->Caption = viewProjet.categorie;
+    Mainform->DetailDateDebut->Caption = DateToStr(viewProjet.dateDebut);
+
+    if(DateToStr(viewProjet.dateFin) == "30/12/1899")
+        Mainform->DetailDateFin->Caption = "Non spécifiée";
+    else
+        Mainform->DetailDateFin->Caption = viewProjet.dateFin;
+
+    Mainform->DetailStatut->Caption = viewProjet.statut;
+
+    if(viewProjet.note.IsEmpty())
+        Mainform->DetailNote->Text = "Sans note";
+    else
+        Mainform->DetailNote->Text = viewProjet.note;
+
+    Mainform->Show();
+    this->Hide();
+    searchPage = true;
+}
+
+void __fastcall TRecherche::BtnCheckClick(TObject *Sender)
+{
+    TImage *btn = dynamic_cast<TImage*>(Sender);
+    if(!btn) return;
+
+    int projetId = btn->Tag;
+
+    String nomProjet = "";
+    for(size_t i = 0; i < projetsRecherche.size(); i++) {
+        if(projetsRecherche[i].id == projetId) {
+            nomProjet = projetsRecherche[i].titre;
+            break;
+        }
+    }
+
+    String message = "On a besoin de votre confirmation s'il vous plait \n\n\:)";
+    if(MessageDlg(message, mtConfirmation, TMsgDlgButtons() << mbYes << mbNo, 0) == mrYes)
+    {
+        Database->QueryCUD->Close();
+        Database->QueryCUD->SQL->Clear();
+        sql = "UPDATE projet SET Statut_p = 'termine' WHERE Id_p = " + IntToStr(projetId);
+        Database->QueryCUD->SQL->Add(sql);
+        try {
+            Database->QueryCUD->ExecSQL();
+            ShowMessage("Félicitation vous avez fini le projet : '" + nomProjet + "'");
+            //ChargerProjets();
+            //AfficherTousProjets();
+            sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(login->IdUser) + " " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 WHEN statut_p = 'termine' THEN 2 END, Id_p DESC";
+            TimerRefresh->Enabled = true;
+        }
+        catch(Exception &e) {
+            ShowMessage("Erreur lors de la suppression : " + e.Message);
+        }
+    }
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::projetClick(TObject *Sender)
+{
+        Mainform->Show();
+        this->Hide();        
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::logoutMouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+        login->mouse_stat = true;
+        login->HoverEffect(logout, logoutPosition);        
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::logoutClick(TObject *Sender)
+{
+        String message = "Êtes-vous sûr de vous déconnecter";
+        if(MessageDlg(message, mtConfirmation, TMsgDlgButtons() << mbYes << mbNo, 0) == mrYes){
+                login->IdUser = 0;
+                this->Hide();
+                login->Show();
+        }        
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::sidebarMouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+        login->mouse_stat = false;
+        login->HoverEffect(logout, logoutPosition);        
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::userMouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+        ShowMessage("Boujour " + login->nom + " !");         
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::EreshTimer(TObject *Sender)
+{
+        TimerRefresh->Enabled = false;
+
+        Dashboard->cartesStat();
+        Dashboard->creerGraphiqueLigne();
+
+        ChargerProjets(sqlSearch);
+        AfficherTousProjets(3);
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::btnRechercheClick(TObject *Sender)
+{
+        String search = ChampRecherche->Text.Trim();
+        sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(login->IdUser) + " AND (titre_p LIKE '%" + search + "%' " + "OR categori_p LIKE '%" + search + "%' " + "OR Type_p LIKE '%" + search + "%' " + "OR statut_p LIKE '%" + search + "%') " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 " + "WHEN statut_p = 'termine' THEN 2 END, id_p DESC";
+        TimerRefresh->Enabled = true;
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::Search_dateClick(TObject *Sender)
+{
+        if(Type->Text == "Type"){
+                ShowMessage("Veuillez choisir un type !");
+                return;
+        }
+
+        String date_av = dateDebutRecherche->Date.FormatString("yyyy-mm-dd");
+        String date_ap = dateFinRecherche->Date.FormatString("yyyy-mm-dd");
+        int IdUser = login->IdUser;
+
+        String type = "";
+        if(Type->Text == "Date debut"){
+                type = "date_debut";
+                sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(IdUser) + " AND " + type + " BETWEEN '" + date_av + "' AND '" + date_ap + "' " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 " + "WHEN statut_p = 'termine' THEN 2 END, id_p DESC";
+                TimerRefresh->Enabled = true;
+                //ShowMessage(sqlSearch);
+        }else if(Type->Text == "Date fin"){
+                type = "date_fin";
+                sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(IdUser) + " AND " + type + " BETWEEN '" + date_av + "' AND '" + date_ap + "' " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 " + "WHEN statut_p = 'termine' THEN 2 END, id_p DESC";
+                TimerRefresh->Enabled = true;
+        }else {
+                type = "date_creation";
+                sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(IdUser) + " AND " + type + " BETWEEN '" + date_av + "' AND '" + date_ap + "' " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 " + "WHEN statut_p = 'termine' THEN 2 END, id_p DESC";
+                TimerRefresh->Enabled = true;
+        }
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::RefreshClick(TObject *Sender)
+{
+        sqlSearch = "SELECT * FROM projet JOIN priorite ON projet.Id_priorite = priorite.Code_p WHERE id_ut = " + IntToStr(login->IdUser) + " " + "ORDER BY CASE WHEN statut_p = 'en_cours' THEN 1 WHEN statut_p = 'termine' THEN 2 END, Id_p DESC";
+        TimerRefresh->Enabled = true;        
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::RefreshMouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+        login->mouse_stat = true;
+        login->HoverEffect(Refresh, btnPosition);
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::Panel2MouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+        login->mouse_stat = false;
+        login->HoverEffect(Refresh, btnPosition);
+        login->HoverEffect(Search_date, btnPosition);
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::Search_dateMouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+        login->mouse_stat = true;
+        login->HoverEffect(Search_date, btnPosition);
+}
+//---------------------------------------------------------------------------
+void __fastcall TRecherche::dashboardClick(TObject *Sender)
+{
+        Dashboard->Show();
+        this->Hide();        
+}
+//---------------------------------------------------------------------------
