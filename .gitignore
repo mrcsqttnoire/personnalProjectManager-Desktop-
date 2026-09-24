@@ -67,3 +67,41 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+.vscode/
+
+# Fichiers compilés et exécutables
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+
+# Fichiers d'objets et unités compilées
+*.o
+*.ppu
+*.o~
+*.ppu~
+
+# Fichiers de sauvegarde de l'éditeur ou de l'IDE
+*~
+*.bak
+*.old
+*.dcu
+*.ddp
+
+# Fichiers spécifiques à Lazarus / Delphi
+*.compiled
+*.or
+*.lps
+*.lfm
+*.res
+*.identcache
+*.local
+*.todo
+ipcnofiles*
+
+# Fichiers de débogage et de log
+*.dbg
+*.log
+*.map
+
